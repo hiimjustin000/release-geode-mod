@@ -31,6 +31,7 @@ runs:
   steps:
     - name: Find Version
       id: version
+      shell: bash
       run: |
         cd ${{ inputs.path }}
         VERSION=$(jq -r .version mod.json)
@@ -43,23 +44,25 @@ runs:
         echo version=$VERSION >> $GITHUB_OUTPUT
 
     - name: Check Existing Release
-      if: ${{ inputs.replace }} == 'false'
+      if: !inputs.replace
       id: check
+      shell: bash
       run: |
         RELEASE=$(gh release view ${{ steps.version.outputs.version }} --repo ${{ inputs.repository }} --json tagName || true)
         if [ -z "$RELEASE" ]; then
           echo "No release found for ${{ steps.version.outputs.version }}, continuing with release"
-          echo release=1 >> $GITHUB_OUTPUT
+          echo release=true >> $GITHUB_OUTPUT
         else
           echo "Release found for ${{ steps.version.outputs.version }}, skipping release"
-          echo release=0 >> $GITHUB_OUTPUT
+          echo release=false >> $GITHUB_OUTPUT
         fi
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
 
     - name: Find Changelog
-      if: steps.check.outputs.release == '1'
+      if: inputs.replace || steps.check.outputs.release
       id: changelog
+      shell: bash
       run: |
         cd ${{ inputs.path }}
         CHANGELOG=$(awk "/## ${{ steps.version.outputs.version }}/{flag=1; next} /##/{flag=0} flag" changelog.md | sed -e :a -e '/^\n*$/{$d;N;ba}')
@@ -70,14 +73,14 @@ runs:
         } >> $GITHUB_OUTPUT
 
     - name: Download Build Output
-      if: steps.check.outputs.release == '1'
+      if: inputs.replace || steps.check.outputs.release
       uses: actions/download-artifact@v4
       with:
         name: Build Output
         path: build-output
 
     - name: Release Version
-      if: steps.check.outputs.release == '1'
+      if: inputs.replace || steps.check.outputs.release
       uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
