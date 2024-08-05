@@ -74,6 +74,20 @@ runs:
           echo "EOF"
         } >> $GITHUB_OUTPUT
 
+    - name: Update Tag
+      if: ${{ inputs.replace == 'true' }}
+      uses: actions/github-script@v7
+      env:
+        VERSION: ${{ steps.version.outputs.version }}
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          const owner = process.env.GITHUB_REPOSITORY.split('/')[0];
+          const repo = process.env.GITHUB_REPOSITORY.split('/')[1];
+          const ref = `tags/${process.env.VERSION}`;
+          const refs = await github.rest.git.listMatchingRefs({ owner, repo, ref });
+          if (refs.data.length > 0 && context.sha) await github.rest.git.updateRef({ owner, repo, ref, sha: refs.data[0].object.sha, force: true });
+
     - name: Download Build Output
       if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
       uses: actions/download-artifact@v4
