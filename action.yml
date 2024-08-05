@@ -44,7 +44,7 @@ runs:
         echo version=$VERSION >> $GITHUB_OUTPUT
 
     - name: Check Existing Release
-      if: ${{ !inputs.replace }}
+      if: ${{ inputs.replace == 'false' }}
       id: check
       shell: bash
       run: |
@@ -60,12 +60,14 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
 
     - name: Find Changelog
-      if: ${{ inputs.replace || steps.check.outputs.release }}
+      if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
       id: changelog
       shell: bash
       run: |
         cd ${{ inputs.path }}
         CHANGELOG=$(awk "/## ${{ steps.version.outputs.version }}/{flag=1; next} /##/{flag=0} flag" changelog.md | sed -e :a -e '/^\n*$/{$d;N;ba}')
+        echo "Changelog found!"
+        echo -e $(sed ':a;N;$!ba;s/\n/\\n/g' <<< "$CHANGELOG")
         {
           echo "changelog<<EOF"
           echo "$CHANGELOG"
@@ -73,14 +75,14 @@ runs:
         } >> $GITHUB_OUTPUT
 
     - name: Download Build Output
-      if: ${{ inputs.replace || steps.check.outputs.release }}
+      if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
       uses: actions/download-artifact@v4
       with:
         name: Build Output
         path: build-output
 
     - name: Release Version
-      if: ${{ inputs.replace || steps.check.outputs.release }}
+      if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
       uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
