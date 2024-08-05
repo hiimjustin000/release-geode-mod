@@ -44,7 +44,7 @@ runs:
         echo version=$VERSION >> $GITHUB_OUTPUT
 
     - name: Check Existing Release
-      if: !inputs.replace
+      if: ${{ !inputs.replace }}
       id: check
       shell: bash
       run: |
@@ -60,7 +60,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
 
     - name: Find Changelog
-      if: inputs.replace || steps.check.outputs.release
+      if: ${{ inputs.replace || steps.check.outputs.release }}
       id: changelog
       shell: bash
       run: |
@@ -73,14 +73,14 @@ runs:
         } >> $GITHUB_OUTPUT
 
     - name: Download Build Output
-      if: inputs.replace || steps.check.outputs.release
+      if: ${{ inputs.replace || steps.check.outputs.release }}
       uses: actions/download-artifact@v4
       with:
         name: Build Output
         path: build-output
 
     - name: Release Version
-      if: inputs.replace || steps.check.outputs.release
+      if: ${{ inputs.replace || steps.check.outputs.release }}
       uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
