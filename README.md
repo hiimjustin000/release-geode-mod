@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "master"
+      - "**"
 
 jobs:
   # ... (See https://github.com/geode-sdk/build-geode-mod/blob/main/README.md)
