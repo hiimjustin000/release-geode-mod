@@ -28,7 +28,7 @@ jobs:
           # The path to the mod's directory. Defaults to the current directory.
           path: ./
           # The repository to release the mod to. Defaults to the current repository.
-          repository: ExampleUser/ExampleMod
+          repository: ${{ github.repository }}
           # Whether or not to replace an existing release. Defaults to false.
           replace: false
           # Whether or not to create a draft release. Defaults to false.
