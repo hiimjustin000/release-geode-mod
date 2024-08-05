@@ -1,0 +1,91 @@
+name: Release Geode Mod
+description: A GitHub action that releases a new version of a mod for Geode, a Geometry Dash mod loader.
+
+inputs:
+  token:
+    description: The GitHub token to use for the release.
+    required: true
+  path:
+    description: The path to the mod directory. Defaults to the current directory.
+    required: false
+    default: ./
+  repository:
+    description: The repository to release to. Defaults to the current repository.
+    required: false
+    default: ${{ github.repository }}
+  replace:
+    description: Whether or not to replace an existing release. Defaults to false.
+    required: false
+    default: false
+  draft:
+    description: Whether or not to create a draft release. Defaults to false.
+    required: false
+    default: false
+  prerelease:
+    description: Whether or not to create a pre-release. Defaults to false.
+    required: false
+    default: false
+
+runs:
+  using: composite
+  steps:
+    - name: Find Version
+      id: version
+      run: |
+        cd ${{ inputs.path }}
+        VERSION=$(jq -r .version mod.json)
+        if [ -z "$VERSION" ]; then
+          echo "Error: Version not found in mod.json"
+          exit 1
+        else
+          echo "Version found! Using version $VERSION"
+        fi
+        echo version=$VERSION >> $GITHUB_OUTPUT
+
+    - name: Check Existing Release
+      if: ${{ inputs.replace }} == 'false'
+      id: check
+      run: |
+        RELEASE=$(gh release view ${{ steps.version.outputs.version }} --repo ${{ inputs.repository }} --json tagName || true)
+        if [ -z "$RELEASE" ]; then
+          echo "No release found for ${{ steps.version.outputs.version }}, continuing with release"
+          echo release=1 >> $GITHUB_OUTPUT
+        else
+          echo "Release found for ${{ steps.version.outputs.version }}, skipping release"
+          echo release=0 >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+
+    - name: Find Changelog
+      if: steps.check.outputs.release == '1'
+      id: changelog
+      run: |
+        cd ${{ inputs.path }}
+        CHANGELOG=$(awk "/## ${{ steps.version.outputs.version }}/{flag=1; next} /##/{flag=0} flag" changelog.md | sed -e :a -e '/^\n*$/{$d;N;ba}')
+        {
+          echo "changelog<<EOF"
+          echo "$CHANGELOG"
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+
+    - name: Download Build Output
+      if: steps.check.outputs.release == '1'
+      uses: actions/download-artifact@v4
+      with:
+        name: Build Output
+        path: build-output
+
+    - name: Release Version
+      if: steps.check.outputs.release == '1'
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      with:
+        files: |
+          build-output/*.geode
+          build-output/*.pdb
+        tag_name: ${{ steps.version.outputs.version }}
+        body: ${{ steps.changelog.outputs.changelog }}
+        draft: ${{ inputs.draft }}
+        prerelease: ${{ inputs.prerelease }}
