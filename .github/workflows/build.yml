@@ -75,5 +75,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: RequestedRatings
-          prerelease: true
-          replace: true
+          draft: true
