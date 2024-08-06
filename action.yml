@@ -36,10 +36,10 @@ runs:
         cd ${{ inputs.path }}
         VERSION=$(jq -r .version mod.json)
         if [ -z "$VERSION" ]; then
-          echo "Error: Version not found in mod.json"
+          echo -e "\e[38;2;255;0;0mError:\e[0m No version found in mod.json"
           exit 1
         else
-          echo "Version found! Using version $VERSION"
+          echo -e "\e[38;2;0;255;0mVersion found"'!'"\e[0m Using version \e[38;2;0;255;255m$VERSION\e[0m"
         fi
         echo version=$VERSION >> $GITHUB_OUTPUT
 
@@ -50,10 +50,13 @@ runs:
       run: |
         RELEASE=$(gh release view ${{ steps.version.outputs.version }} --repo ${{ inputs.repository }} --json tagName || true)
         if [ -z "$RELEASE" ]; then
-          echo "No release found for ${{ steps.version.outputs.version }}, continuing with release"
+          echo -e "\e[38;2;0;255;0mNo releases found!\e[0m"
+          echo -e "Creating new release for version \e[38;2;0;255;255m${{ steps.version.outputs.version }}\e[0m..."
           echo release=true >> $GITHUB_OUTPUT
         else
-          echo "Release found for ${{ steps.version.outputs.version }}, skipping release"
+          echo -e "\e[38;2;255;255;0mWarning:\e[0m Version \e[38;2;0;255;255m${{ steps.version.outputs.version }}\e[0m has already been released"
+          echo -e "\e[38;2;0;128;255mNote:\e[0m To replace the existing release, set the \e[38;2;0;255;255mreplace\e[0m input to \e[38;2;0;255;255mtrue\e[0m"
+          echo "Skipping release..."
           echo release=false >> $GITHUB_OUTPUT
         fi
       env:
@@ -66,8 +69,13 @@ runs:
       run: |
         cd ${{ inputs.path }}
         CHANGELOG=$(awk "/## ${{ steps.version.outputs.version }}/{flag=1; next} /##/{flag=0} flag" changelog.md | sed -e :a -e '/^\n*$/{$d;N;ba}')
-        echo "Changelog found!"
-        echo -e $(sed ':a;N;$!ba;s/\n/\\n/g' <<< "$CHANGELOG")
+        if [ -z "$CHANGELOG" ]; then
+          echo -e "\e[38;2;255;255;0mWarning:\e[0m No changelog found for version \e[38;2;0;255;255m${{ steps.version.outputs.version }}\e[0m"
+          echo "Using empty changelog..."
+        else
+          echo -e "\e[38;2;0;255;0mChangelog found"'!'"\e[0m"
+          echo -e $(sed ':a;N;$!ba;s/\n/\\n/g' <<< "$CHANGELOG")
+        fi
         {
           echo "changelog<<EOF"
           echo "$CHANGELOG"
@@ -86,7 +94,11 @@ runs:
           const repo = process.env.GITHUB_REPOSITORY.split("/")[1];
           const ref = `tags/${process.env.VERSION}`;
           const refs = await github.rest.git.listMatchingRefs({ owner, repo, ref });
-          if (refs.data.length > 0 && context.sha) await github.rest.git.updateRef({ owner, repo, ref, sha: context.sha, force: true });
+          if (refs.data.length > 0 && context.sha) {
+            console.log("Updating tag...");
+            await github.rest.git.updateRef({ owner, repo, ref, sha: context.sha, force: true });
+            console.log("Tag updated!");
+          } else console.log("No tags to update");
 
     - name: Download Build Output
       if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
