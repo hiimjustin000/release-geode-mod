@@ -34,7 +34,7 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.path }}
-        VERSION=$(jq -r .version mod.json)
+        VERSION=$(jq -r .version mod.json || true)
         if [ -z "$VERSION" ]; then
           echo -e "\e[38;2;255;0;0mError:\e[0m No version found in mod.json"
           exit 1
@@ -68,7 +68,7 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.path }}
-        CHANGELOG=$(awk "/## ${{ steps.version.outputs.version }}/{flag=1; next} /##/{flag=0} flag" changelog.md | sed -e :a -e '/^\n*$/{$d;N;ba}')
+        CHANGELOG=$(awk "/## ${{ steps.version.outputs.version }}/{flag=1; next} /##/{flag=0} flag" changelog.md | sed -e :a -e '/^\n*$/{$d;N;ba}' || true)
         if [ -z "$CHANGELOG" ]; then
           echo -e "\e[38;2;255;255;0mWarning:\e[0m No changelog found for version \e[38;2;0;255;255m${{ steps.version.outputs.version }}\e[0m"
           echo "Using empty changelog..."
