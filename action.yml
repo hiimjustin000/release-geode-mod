@@ -28,7 +28,7 @@ inputs:
   workflow:
     description: The workflow file in .github/workflows to use for the release. Defaults to the first file running the geode-sdk/build-geode-mod action.
     required: false
-    default: $(grep -lr build-geode-mod ${{ github.workspace }}/.github/workflows | head -n 1 | xargs basename)
+    default: ''
 
 outputs:
   modid:
@@ -126,7 +126,16 @@ runs:
       id: runid
       shell: bash
       run: |
-        RUNID=$(gh run list --repo ${{ inputs.repository }} --workflow ${{ inputs.workflow }} --status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
+        if [ -z "${{ inputs.workflow }}" ]; then
+          WORKFLOW=$(grep -lr build-geode-mod ${{ github.workspace }}/.github/workflows | head -n 1 | xargs basename)
+          if [ -z "$WORKFLOW" ]; then
+            echo -e "\e[38;2;255;0;0mError:\e[0m No workflow found running the geode-sdk/build-geode-mod action"
+            exit 1
+          fi
+          RUNID=$(gh run list --repo ${{ inputs.repository }} --workflow $WORKFLOW --status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
+        else
+          RUNID=$(gh run list --repo ${{ inputs.repository }} --workflow ${{ inputs.workflow }} --status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
+        fi
         if [ -z "$RUNID" ]; then
           echo -e "\e[38;2;255;0;0mError:\e[0m No runs found for repository ${{ inputs.repository }}"
           exit 1
