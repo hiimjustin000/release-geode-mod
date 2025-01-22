@@ -145,6 +145,7 @@ runs:
         merge-multiple: true
         path: build-output
         run-id: ${{ steps.runid.outputs.runid }}
+        repository: ${{ inputs.repository }}
 
     - name: Release Version
       id: release
