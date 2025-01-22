@@ -126,7 +126,7 @@ runs:
       id: runid
       shell: bash
       run: |
-        RUNID=$(gh run list --repo ${{ inputs.repository }} --status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
+        RUNID=$(gh run list --repo ${{ inputs.repository }} --workflow ${{ inputs.workflow }} --status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
         if [ -z "$RUNID" ]; then
           echo -e "\e[38;2;255;0;0mError:\e[0m No runs found for repository ${{ inputs.repository }}"
           exit 1
