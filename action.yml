@@ -134,6 +134,8 @@ runs:
           echo -e "\e[38;2;0;255;0mRun found"'!'"\e[0m Using run ID \e[38;2;0;255;255m$RUNID\e[0m"
         fi
         echo runid=$RUNID >> $GITHUB_OUTPUT
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
 
     - name: Download Build Output
       if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
