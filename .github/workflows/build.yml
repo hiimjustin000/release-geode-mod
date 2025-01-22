@@ -23,4 +23,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: BareBonesMod
+          repository: hiimjustin000/BareBonesMod
           draft: true
