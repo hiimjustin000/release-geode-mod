@@ -25,11 +25,23 @@ inputs:
     description: Whether or not to create a pre-release. Defaults to false.
     required: false
     default: false
+  workflow:
+    description: The workflow file in .github/workflows to use for the release. Defaults to the first file running the geode-sdk/build-geode-mod action.
+    required: false
+    default: $(grep -lr build-geode-mod ${{ github.workspace }}/.github/workflows | head -n 1 | xargs basename)
+
+outputs:
+  modid:
+    description: The mod ID of the released mod.
+    value: ${{ steps.version.outputs.modid }}
+  version:
+    description: The version of the released mod.
+    value: ${{ steps.version.outputs.version }}
 
 runs:
   using: composite
   steps:
-    - name: Find Version
+    - name: Find Version and Mod ID
       id: version
       shell: bash
       run: |
@@ -39,16 +51,25 @@ runs:
           echo -e "\e[38;2;255;0;0mError:\e[0m No version found in mod.json"
           exit 1
         else
+          VERSION=${VERSION#v}
           echo -e "\e[38;2;0;255;0mVersion found"'!'"\e[0m Using version \e[38;2;0;255;255m$VERSION\e[0m"
         fi
         echo version=$VERSION >> $GITHUB_OUTPUT
+        MODID=$(jq -r .id mod.json || true)
+        if [ -z "$MODID" ]; then
+          echo -e "\e[38;2;255;0;0mError:\e[0m No ID found in mod.json"
+          exit 1
+        else
+          echo -e "\e[38;2;0;255;0mID found"'!'"\e[0m Using ID \e[38;2;0;255;255m$MODID\e[0m"
+        fi
+        echo modid=$MODID >> $GITHUB_OUTPUT
 
     - name: Check Existing Release
       if: ${{ inputs.replace == 'false' }}
       id: check
       shell: bash
       run: |
-        RELEASE=$(gh release view ${{ steps.version.outputs.version }} --repo ${{ inputs.repository }} --json tagName || true)
+        RELEASE=$(gh release view v${{ steps.version.outputs.version }} --repo ${{ inputs.repository }} --json tagName || true)
         if [ -z "$RELEASE" ]; then
           echo -e "\e[38;2;0;255;0mNo releases found!\e[0m"
           echo -e "Creating new release for version \e[38;2;0;255;255m${{ steps.version.outputs.version }}\e[0m..."
@@ -68,7 +89,7 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.path }}
-        CHANGELOG=$(awk "/## ${{ steps.version.outputs.version }}/{flag=1; next} /##/{flag=0} flag" changelog.md | sed -e :a -e '/^\n*$/{$d;N;ba}' || true)
+        CHANGELOG=$(awk "/^#+ v?${{ steps.version.outputs.version }} /{flag=1; next} /^#+ v?[0-9]/{flag=0} flag" changelog.md | sed -e :a -e '/^\n*$/{$d;N;ba}' || true)
         if [ -z "$CHANGELOG" ]; then
           echo -e "\e[38;2;255;255;0mWarning:\e[0m No changelog found for version \e[38;2;0;255;255m${{ steps.version.outputs.version }}\e[0m"
           echo "Using empty changelog..."
@@ -86,7 +107,7 @@ runs:
       if: ${{ inputs.replace == 'true' }}
       uses: actions/github-script@v7
       env:
-        VERSION: ${{ steps.version.outputs.version }}
+        VERSION: v${{ steps.version.outputs.version }}
       with:
         github-token: ${{ inputs.token }}
         script: |
@@ -100,14 +121,31 @@ runs:
             console.log("Tag updated!");
           } else console.log("No tags to update");
 
+    - name: Find Run ID
+      if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
+      id: runid
+      shell: bash
+      run: |
+        RUNID=$(gh run list --repo ${{ inputs.repository }}--status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
+        if [ -z "$RUNID" ]; then
+          echo -e "\e[38;2;255;0;0mError:\e[0m No runs found for repository ${{ inputs.repository }}"
+          exit 1
+        else
+          echo -e "\e[38;2;0;255;0mRun found"'!'"\e[0m Using run ID \e[38;2;0;255;255m$RUNID\e[0m"
+        fi
+        echo runid=$RUNID >> $GITHUB_OUTPUT
+
     - name: Download Build Output
       if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
       uses: actions/download-artifact@v4
       with:
-        name: Build Output
+        github-token: ${{ inputs.token }}
+        merge-multiple: true
         path: build-output
+        run-id: ${{ steps.runid.outputs.runid }}
 
     - name: Release Version
+      id: release
       if: ${{ inputs.replace == 'true' || steps.check.outputs.release == 'true' }}
       uses: softprops/action-gh-release@v2
       env:
@@ -116,7 +154,8 @@ runs:
         files: |
           build-output/*.geode
           build-output/*.pdb
-        tag_name: ${{ steps.version.outputs.version }}
+          build-output/*.sym
+        tag_name: v${{ steps.version.outputs.version }}
         body: ${{ steps.changelog.outputs.changelog }}
         draft: ${{ inputs.draft }}
         prerelease: ${{ inputs.prerelease }}
