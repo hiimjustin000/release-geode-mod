@@ -20,4 +20,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: BareBonesMod
-          draft: true
+          replace: true
+          prerelease: true

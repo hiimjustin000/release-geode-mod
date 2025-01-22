@@ -36,11 +36,12 @@ jobs:
           path: BareBonesMod
 
       - name: Build the mod
-        uses: geode-sdk/build-geode-mod@main
+        uses: hiimjustin000/build-geode-mod@main
         with:
           path: BareBonesMod
           build-config: RelWithDebInfo
           export-pdb: true
+          export-symbols: true
           combine: true
           target: ${{ matrix.config.target }}
 
@@ -50,7 +51,7 @@ jobs:
     needs: ['build']
 
     steps:
-      - uses: geode-sdk/build-geode-mod/combine@main
+      - uses: hiimjustin000//build-geode-mod/combine@main
         id: build
 
       - uses: actions/upload-artifact@v4
