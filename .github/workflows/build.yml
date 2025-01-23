@@ -32,11 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: hiimjustin000/BareBonesMod
+          repository: hiimjasmine00/BareBonesMod
           path: BareBonesMod
 
       - name: Build the mod
-        uses: hiimjustin000/build-geode-mod@main
+        uses: hiimjasmine00/build-geode-mod@main
         with:
           path: BareBonesMod
           build-config: RelWithDebInfo
@@ -51,7 +51,7 @@ jobs:
     needs: ['build']
 
     steps:
-      - uses: hiimjustin000/build-geode-mod/combine@main
+      - uses: hiimjasmine00/build-geode-mod/combine@main
         id: build
 
       - uses: actions/upload-artifact@v4

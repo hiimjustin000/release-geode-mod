@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hiimjustin000/release-geode-mod@main
+      - uses: hiimjasmine00/release-geode-mod@main
         with:
           # The GitHub token to use for the release.
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hiimjustin000/release-geode-mod/publish@main
+      - uses: hiimjasmine00/release-geode-mod/publish@main
         with:
           # The GitHub token to use for the release.
           token: ${{ secrets.GITHUB_TOKEN }}
