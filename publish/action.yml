@@ -1,0 +1,69 @@
+name: Update Geode Mod
+description: A GitHub action that publishes a new version of a mod for Geode, a Geometry Dash mod loader.
+
+inputs:
+  token:
+    description: The GitHub token to use for the update.
+    required: true
+  path:
+    description: The path to the mod directory. Defaults to the current directory.
+    required: false
+    default: ./
+
+runs:
+  using: composite
+  steps:
+    - name: Update Mod
+      id: update
+      shell: bash
+      run: |
+        GEODE_TOKEN=$(curl -X POST https://api.geode-sdk.org/v1/login/github/token -d '{"token":"${{ inputs.token }}"}' -H "Content-Type: application/json" | jq -r .payload)
+        if [ -z "$GEODE_TOKEN" ]; then
+          echo -e "\e[38;2;255;0;0mError:\e[0m Failed to authenticate with Geode"
+          exit 1
+        else
+          echo -e "\e[38;2;0;255;0mAuthenticated with Geode"'!'"\e[0m"
+        fi
+
+        cd ${{ inputs.path }}
+        MOD_ID=$(jq -r .id mod.json || true)
+        if [ -z "$MOD_ID" ]; then
+          echo -e "\e[38;2;255;0;0mError:\e[0m No ID found in mod.json"
+          exit 1
+        else
+          echo -e "\e[38;2;0;255;0mID found"'!'"\e[0m Using ID \e[38;2;0;255;255m$MOD_ID\e[0m"
+        fi
+        VERSION=$(jq -r .version mod.json || true)
+        if [ -z "$VERSION" ]; then
+          echo -e "\e[38;2;255;0;0mError:\e[0m No version found in mod.json"
+          exit 1
+        else
+          VERSION=v${VERSION#v}
+          echo -e "\e[38;2;0;255;0mVersion found"'!'"\e[0m Using version \e[38;2;0;255;255m$VERSION\e[0m"
+        fi
+        DOWNLOAD_LINK=$(gh release view $VERSION --repo ${{ github.repository }} --json assets --jq '.assets.[] | select(.name | test("\\.geode$")) | .url' || true)
+        if [ -z "$DOWNLOAD_LINK" ]; then
+          echo -e "\e[38;2;255;0;0mError:\e[0m No download link found for version $VERSION"
+          exit 1
+        else
+          echo -e "\e[38;2;0;255;0mDownload link found"'!'"\e[0m Using link \e[38;2;0;255;255m$DOWNLOAD_LINK\e[0m"
+        fi
+
+        curl https://api.geode-sdk.org/v1/mods/$MOD_ID -f
+        if [ $? -ne 0 ]; then
+          curl -X POST https://api.geode-sdk.org/v1/mods -d '{"download_link":"$DOWNLOAD_LINK"}' -H "Content-Type: application/json" -H "Authorization: Bearer $GEODE_TOKEN" -f
+          if [ $? -ne 0 ]; then
+            echo -e "\e[38;2;255;0;0mError:\e[0m Failed to create mod"
+            exit 1
+          else
+            echo -e "\e[38;2;0;255;0mMod created"'!'"\e[0m"
+          fi
+        fi
+
+        curl -X POST https://api.geode-sdk.org/v1/mods/$MOD_ID/versions -d '{"download_link":"$DOWNLOAD_LINK"}' -H "Content-Type: application/json -H "Authorization: Bearer $GEODE_TOKEN" -f
+        if [ $? -ne 0 ]; then
+          echo -e "\e[38;2;255;0;0mError:\e[0m Failed to create version"
+          exit 1
+        else
+          echo -e "\e[38;2;0;255;0mVersion created"'!'"\e[0m"
+        fi
