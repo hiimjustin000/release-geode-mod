@@ -46,13 +46,13 @@ runs:
           echo -e "\e[38;2;255;0;0mError:\e[0m No download link found for version $VERSION"
           exit 1
         else
-          echo -e "\e[38;2;0;255;0mDownload link found"'!'"\e[0m Using link \e[38;2;0;255;255m$DOWNLOAD_LINK\e[0m"
+          echo -e "\e[38;2;0;255;0mDownload link found"'!'"\e[0m Using link $DOWNLOAD_LINK"
         fi
 
         echo -e "Updating mod \e[38;2;0;255;255m$MOD_ID\e[0m to version \e[38;2;0;255;255m$VERSION\e[0m..."
         MOD_RESPONSE=$(curl https://api.geode-sdk.org/v1/mods/$MOD_ID | jq -r .error || true)
         if [ -n "$MOD_RESPONSE" ]; then
-          echo -e "\e[38;2;0;255;0mNo mod found!\e[0m Creating new mod..."
+          echo -e "\e[38;2;0;255;0mNo mod found!\e[0m Creating \e[38;2;0;255;255m$MOD_ID\e[0m..."
           MOD_CREATE=$(curl -X POST https://api.geode-sdk.org/v1/mods -d '{"download_link":"$DOWNLOAD_LINK"}' -H "Content-Type: application/json" -H "Authorization: Bearer $GEODE_TOKEN" | jq -r .error || true)
           if [ -n "$MOD_CREATE" ]; then
             echo -e "\e[38;2;255;0;0mError:\e[0m Failed to create mod: $MOD_CREATE"
@@ -62,7 +62,8 @@ runs:
           fi
         fi
 
-        MOD_UPDATE=$(curl -X POST https://api.geode-sdk.org/v1/mods/$MOD_ID/versions -d '{"download_link":"$DOWNLOAD_LINK"}' -H "Content-Type: application/json" -H "Authorization: Bearer $GEODE_TOKEN" | jq -r .error || true)
+        set -x
+        MOD_UPDATE=$(curl -X POST https://api.geode-sdk.org/v1/mods/$MOD_ID/versions -d '{"download_link":"$DOWNLOAD_LINK"}' -H "Content-Type: application/json" -H "Authorization: Bearer PLACEHOLDER" | jq -r .error || true)
         if [ -n "$MOD_UPDATE" ]; then
           echo -e "\e[38;2;255;0;0mError:\e[0m Failed to create version: $MOD_UPDATE"
           exit 1
