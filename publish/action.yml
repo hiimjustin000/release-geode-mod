@@ -62,7 +62,7 @@ runs:
           fi
         fi
 
-        MOD_UPDATE=$(curl -X POST https://api.geode-sdk.org/v1/mods/$MOD_ID/versions -d '{"download_link":"'"${$DOWNLOAD_LINK}"'"}' -H "Content-Type: application/json" -H "Authorization: Bearer $GEODE_TOKEN" | jq -r .error || true)
+        MOD_UPDATE=$(curl -X POST https://api.geode-sdk.org/v1/mods/$MOD_ID/versions -d '{"download_link":"'"${DOWNLOAD_LINK}"'"}' -H "Content-Type: application/json" -H "Authorization: Bearer $GEODE_TOKEN" | jq -r .error || true)
         if [ -n "$MOD_UPDATE" ]; then
           echo -e "\e[38;2;255;0;0mError:\e[0m Failed to create version: $MOD_UPDATE"
           exit 1
