@@ -5,7 +5,7 @@ on:
 
 jobs:
   release:
-    name: Create mod release
+    name: Release mod
     runs-on: ubuntu-latest
 
     steps:

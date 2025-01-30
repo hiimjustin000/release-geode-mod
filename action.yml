@@ -26,6 +26,11 @@ inputs:
     required: false
     default: ''
 
+outputs:
+  url:
+    description: The URL of the GitHub release.
+    value: ${{ steps.release.outputs.url }}
+
 runs:
   using: composite
   steps:
@@ -38,10 +43,10 @@ runs:
         if [ -z "$VERSION" ]; then
           echo -e "\e[38;2;255;0;0mError:\e[0m No version found in mod.json"
           exit 1
-        else
-          VERSION=${VERSION#v}
-          echo -e "\e[38;2;0;255;0mVersion found"'!'"\e[0m Using version \e[38;2;0;255;255m$VERSION\e[0m"
         fi
+
+        VERSION=${VERSION#v}
+        echo -e "\e[38;2;0;255;0mVersion found"'!'"\e[0m Using version \e[38;2;0;255;255m$VERSION\e[0m"
         echo version=$VERSION >> $GITHUB_OUTPUT
 
     - name: Check Existing Release
@@ -112,16 +117,16 @@ runs:
             echo -e "\e[38;2;255;0;0mError:\e[0m No workflow found running the geode-sdk/build-geode-mod action"
             exit 1
           fi
-          RUNID=$(gh run list --repo ${{ github.repository }} --workflow $WORKFLOW --status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
         else
-          RUNID=$(gh run list --repo ${{ github.repository }} --workflow ${{ inputs.workflow }} --status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
+          WORKFLOW=${{ inputs.workflow }}
         fi
+        RUNID=$(gh run list --repo ${{ github.repository }} --workflow $WORKFLOW --status completed --json event --json databaseId --jq '.[] | select(.event!="pull_request") | .databaseId' | head -n 1 || true)
         if [ -z "$RUNID" ]; then
           echo -e "\e[38;2;255;0;0mError:\e[0m No runs found"
           exit 1
-        else
-          echo -e "\e[38;2;0;255;0mRun found"'!'"\e[0m Using run ID \e[38;2;0;255;255m$RUNID\e[0m"
         fi
+
+        echo -e "\e[38;2;0;255;0mRun found"'!'"\e[0m Using run ID \e[38;2;0;255;255m$RUNID\e[0m"
         echo runid=$RUNID >> $GITHUB_OUTPUT
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
@@ -142,10 +147,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
       with:
-        files: |
-          build-output/*.geode
-          build-output/*.pdb
-          build-output/*.sym
+        files: build-output/*.*
         tag_name: v${{ steps.version.outputs.version }}
         body: ${{ steps.changelog.outputs.changelog }}
         draft: ${{ inputs.draft }}
